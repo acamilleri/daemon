@@ -32,6 +32,17 @@ func newDaemon(name, description, execStartPath string, dependencies []string) (
 	return &windowsRecord{name, description, execStartPath, dependencies}, nil
 }
 
+// Is a service installed
+func (windows *windowsRecord) IsInstalled() (bool, error) {
+	s, err := m.OpenService(windows.name)
+	if err == nil {
+		s.Close()
+		return true, err
+	}
+
+	return false, err
+}
+
 // Install the service
 func (windows *windowsRecord) Install(args ...string) (string, error) {
 	installAction := "Install " + windows.description + ":"
@@ -51,10 +62,8 @@ func (windows *windowsRecord) Install(args ...string) (string, error) {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(windows.name)
-	if err == nil {
-		s.Close()
-		return installAction + failed, err
+	if ok, err := windows.IsInstalled(); ok {
+		return installAction + failed, ErrAlreadyInstalled
 	}
 
 	s, err = m.CreateService(windows.name, windows.execStartPath, mgr.Config{
@@ -80,8 +89,7 @@ func (windows *windowsRecord) Remove() (string, error) {
 		return removeAction + failed, getWindowsError(err)
 	}
 	defer m.Disconnect()
-	s, err := m.OpenService(windows.name)
-	if err != nil {
+	if ok, err := windows.IsInstalled(); !ok {
 		return removeAction + failed, getWindowsError(err)
 	}
 	defer s.Close()
@@ -102,8 +110,7 @@ func (windows *windowsRecord) Start() (string, error) {
 		return startAction + failed, getWindowsError(err)
 	}
 	defer m.Disconnect()
-	s, err := m.OpenService(windows.name)
-	if err != nil {
+	if ok, err := windows.IsInstalled(); !ok {
 		return startAction + failed, getWindowsError(err)
 	}
 	defer s.Close()
@@ -123,8 +130,7 @@ func (windows *windowsRecord) Stop() (string, error) {
 		return stopAction + failed, getWindowsError(err)
 	}
 	defer m.Disconnect()
-	s, err := m.OpenService(windows.name)
-	if err != nil {
+	if ok, err := windows.IsInstalled(); !ok {
 		return stopAction + failed, getWindowsError(err)
 	}
 	defer s.Close()
@@ -188,8 +194,7 @@ func (windows *windowsRecord) Status() (string, error) {
 		return "Getting status:" + failed, getWindowsError(err)
 	}
 	defer m.Disconnect()
-	s, err := m.OpenService(windows.name)
-	if err != nil {
+	if ok, err := windows.IsInstalled(); !ok {
 		return "Getting status:" + failed, getWindowsError(err)
 	}
 	defer s.Close()
