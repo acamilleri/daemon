@@ -32,13 +32,13 @@ func (darwin *darwinRecord) servicePath() string {
 }
 
 // Is a service installed
-func (darwin *darwinRecord) IsInstalled() bool {
-
-	if _, err := os.Stat(darwin.servicePath()); err == nil {
-		return true
+func (darwin *darwinRecord) IsInstalled() (bool, error) {
+	_, err := os.Stat(darwin.servicePath())
+	if err == nil {
+		return true, err
 	}
 
-	return false
+	return false, err
 }
 
 // Get executable path
@@ -74,8 +74,8 @@ func (darwin *darwinRecord) Install(args ...string) (string, error) {
 
 	srvPath := darwin.servicePath()
 
-	if darwin.IsInstalled() {
-		return installAction + failed, ErrAlreadyInstalled
+	if check, err := darwin.IsInstalled(); check {
+		return installAction + failed, err
 	}
 
 	if darwin.execStartPath == "" {
@@ -121,8 +121,8 @@ func (darwin *darwinRecord) Remove() (string, error) {
 		return removeAction + failed, err
 	}
 
-	if !darwin.IsInstalled() {
-		return removeAction + failed, ErrNotInstalled
+	if check, err := darwin.IsInstalled(); !check {
+		return removeAction + failed, err
 	}
 
 	if err := os.Remove(darwin.servicePath()); err != nil {
@@ -140,8 +140,8 @@ func (darwin *darwinRecord) Start() (string, error) {
 		return startAction + failed, err
 	}
 
-	if !darwin.IsInstalled() {
-		return startAction + failed, ErrNotInstalled
+	if check, err := darwin.IsInstalled(); !check {
+		return startAction + failed, err
 	}
 
 	if _, ok := darwin.checkRunning(); ok {
@@ -163,8 +163,8 @@ func (darwin *darwinRecord) Stop() (string, error) {
 		return stopAction + failed, err
 	}
 
-	if !darwin.IsInstalled() {
-		return stopAction + failed, ErrNotInstalled
+	if check, err := darwin.IsInstalled(); !check {
+		return stopAction + failed, err
 	}
 
 	if _, ok := darwin.checkRunning(); !ok {
@@ -185,8 +185,8 @@ func (darwin *darwinRecord) Status() (string, error) {
 		return "", err
 	}
 
-	if !darwin.IsInstalled() {
-		return "Status could not defined", ErrNotInstalled
+	if check, err := darwin.IsInstalled(); !check {
+		return "Status could not defined", err
 	}
 
 	statusAction, _ := darwin.checkRunning()

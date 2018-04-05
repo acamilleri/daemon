@@ -32,6 +32,23 @@ func newDaemon(name, description, execStartPath string, dependencies []string) (
 	return &windowsRecord{name, description, execStartPath, dependencies}, nil
 }
 
+// Is a service installed
+func (windows *windowsRecord) IsInstalled() (bool, error) {
+	m, err := mgr.Connect()
+	if err != nil {
+		return false, err
+	}
+	defer m.Disconnect()
+
+	err = m.OpenService(windows.name)
+	if err == nil {
+		s.Close()
+		return true, err
+	}
+
+	return false, err
+}
+
 // Install the service
 func (windows *windowsRecord) Install(args ...string) (string, error) {
 	installAction := "Install " + windows.description + ":"
@@ -45,19 +62,11 @@ func (windows *windowsRecord) Install(args ...string) (string, error) {
 		return installAction + failed, err
 	}
 
-	m, err := mgr.Connect()
-	if err != nil {
-		return installAction + failed, err
-	}
-	defer m.Disconnect()
-
-	s, err := m.OpenService(windows.name)
-	if err == nil {
-		s.Close()
-		return installAction + failed, err
+	if check, err := windows.IsInstalled(); check {
+		return installAction + false, getWindowsError(err)
 	}
 
-	s, err = m.CreateService(windows.name, windows.execStartPath, mgr.Config{
+	s, err := m.CreateService(windows.name, windows.execStartPath, mgr.Config{
 		DisplayName:  windows.name,
 		Description:  windows.description,
 		StartType:    mgr.StartAutomatic,

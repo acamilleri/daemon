@@ -26,13 +26,13 @@ func (linux *upstartRecord) servicePath() string {
 }
 
 // Is a service installed
-func (linux *upstartRecord) IsInstalled() bool {
-
-	if _, err := os.Stat(linux.servicePath()); err == nil {
-		return true
+func (linux *upstartRecord) IsInstalled() (bool, error) {
+	_, err := os.Stat(linux.servicePath())
+	if err == nil {
+		return true, err
 	}
 
-	return false
+	return false, err
 }
 
 // Check service is running
@@ -63,8 +63,8 @@ func (linux *upstartRecord) Install(args ...string) (string, error) {
 
 	srvPath := linux.servicePath()
 
-	if linux.IsInstalled() {
-		return installAction + failed, ErrAlreadyInstalled
+	if check, err := linux.IsInstalled(); check {
+		return installAction + failed, err
 	}
 
 	if linux.execStartPath == "" {
@@ -113,8 +113,8 @@ func (linux *upstartRecord) Remove() (string, error) {
 		return removeAction + failed, err
 	}
 
-	if !linux.IsInstalled() {
-		return removeAction + failed, ErrNotInstalled
+	if check, err := linux.IsInstalled(); !check {
+		return removeAction + failed, err
 	}
 
 	if err := os.Remove(linux.servicePath()); err != nil {
@@ -132,8 +132,8 @@ func (linux *upstartRecord) Start() (string, error) {
 		return startAction + failed, err
 	}
 
-	if !linux.IsInstalled() {
-		return startAction + failed, ErrNotInstalled
+	if check, err := linux.IsInstalled(); !check {
+		return startAction + failed, err
 	}
 
 	if _, ok := linux.checkRunning(); ok {
@@ -155,8 +155,8 @@ func (linux *upstartRecord) Stop() (string, error) {
 		return stopAction + failed, err
 	}
 
-	if !linux.IsInstalled() {
-		return stopAction + failed, ErrNotInstalled
+	if check, err := linux.IsInstalled(); !check {
+		return stopAction + failed, err
 	}
 
 	if _, ok := linux.checkRunning(); !ok {
@@ -177,8 +177,8 @@ func (linux *upstartRecord) Status() (string, error) {
 		return "", err
 	}
 
-	if !linux.IsInstalled() {
-		return "Status could not defined", ErrNotInstalled
+	if check, err := linux.IsInstalled(); !check {
+		return "Status could not defined", err
 	}
 
 	statusAction, _ := linux.checkRunning()

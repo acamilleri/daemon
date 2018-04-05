@@ -25,13 +25,13 @@ func (bsd *bsdRecord) servicePath() string {
 }
 
 // Is a service installed
-func (bsd *bsdRecord) IsInstalled() bool {
-
-	if _, err := os.Stat(bsd.servicePath()); err == nil {
-		return true
+func (bsd *bsdRecord) IsInstalled() (bool, error) {
+	_, err := os.Stat(bsd.servicePath())
+	if err == nil {
+		return true, err
 	}
 
-	return false
+	return false, err
 }
 
 // Is a service is enabled
@@ -111,8 +111,8 @@ func (bsd *bsdRecord) Install(args ...string) (string, error) {
 
 	srvPath := bsd.servicePath()
 
-	if bsd.IsInstalled() {
-		return installAction + failed, ErrAlreadyInstalled
+	if check, err := bsd.IsInstalled(); check {
+		return installAction + failed, err
 	}
 
 	if bsd.execStartPath == "" {
@@ -161,8 +161,8 @@ func (bsd *bsdRecord) Remove() (string, error) {
 		return removeAction + failed, err
 	}
 
-	if !bsd.IsInstalled() {
-		return removeAction + failed, ErrNotInstalled
+	if check, err := bsd.IsInstalled(); !check {
+		return removeAction + failed, err
 	}
 
 	if err := os.Remove(bsd.servicePath()); err != nil {
@@ -180,8 +180,8 @@ func (bsd *bsdRecord) Start() (string, error) {
 		return startAction + failed, err
 	}
 
-	if !bsd.IsInstalled() {
-		return startAction + failed, ErrNotInstalled
+	if check, err := bsd.IsInstalled(); !check {
+		return startAction + failed, err
 	}
 
 	if _, ok := bsd.checkRunning(); ok {
@@ -203,8 +203,8 @@ func (bsd *bsdRecord) Stop() (string, error) {
 		return stopAction + failed, err
 	}
 
-	if !bsd.IsInstalled() {
-		return stopAction + failed, ErrNotInstalled
+	if check, err := bsd.IsInstalled(); !check {
+		return stopAction + failed, err
 	}
 
 	if _, ok := bsd.checkRunning(); !ok {
@@ -225,8 +225,8 @@ func (bsd *bsdRecord) Status() (string, error) {
 		return "", err
 	}
 
-	if !bsd.IsInstalled() {
-		return "Status could not defined", ErrNotInstalled
+	if check, err := bsd.IsInstalled(); !check {
+		return "Status could not defined", err
 	}
 
 	statusAction, _ := bsd.checkRunning()
