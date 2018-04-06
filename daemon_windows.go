@@ -40,7 +40,7 @@ func (windows *windowsRecord) IsInstalled() (bool, error) {
 	}
 	defer m.Disconnect()
 
-	err = m.OpenService(windows.name)
+	s, err := m.OpenService(windows.name)
 	if err == nil {
 		s.Close()
 		return true, err
@@ -63,8 +63,14 @@ func (windows *windowsRecord) Install(args ...string) (string, error) {
 	}
 
 	if check, err := windows.IsInstalled(); check {
-		return installAction + false, getWindowsError(err)
+		return installAction + failed, getWindowsError(err)
 	}
+
+	m, err := mgr.Connect()
+	if err != nil {
+		return false, err
+	}
+	defer m.Disconnect()
 
 	s, err := m.CreateService(windows.name, windows.execStartPath, mgr.Config{
 		DisplayName:  windows.name,
