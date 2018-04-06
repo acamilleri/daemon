@@ -68,7 +68,7 @@ func (windows *windowsRecord) Install(args ...string) (string, error) {
 
 	m, err := mgr.Connect()
 	if err != nil {
-		return false, err
+		return installAction + failed, err
 	}
 	defer m.Disconnect()
 
